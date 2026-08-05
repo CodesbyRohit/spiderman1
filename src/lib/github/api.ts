@@ -32,6 +32,7 @@ export interface GitHubBundle {
 }
 
 const CACHE_TTL = 10 * 60 * 1000 // 10 minutes
+const FETCH_TIMEOUT = 12_000 // hard ceiling: a hung API must never stall the UI
 const KEY = 'arachnid-gh-v1'
 
 async function gh<T>(path: string, signal?: AbortSignal): Promise<T | null> {
@@ -40,21 +41,37 @@ async function gh<T>(path: string, signal?: AbortSignal): Promise<T | null> {
     'X-GitHub-Api-Version': '2022-11-28',
   }
   if (env.githubToken) headers.Authorization = `Bearer ${env.githubToken}`
+  const controller = new AbortController()
+  const timer = window.setTimeout(() => controller.abort(), FETCH_TIMEOUT)
+  const onOuterAbort = () => controller.abort()
+  if (signal) {
+    if (signal.aborted) controller.abort()
+    else signal.addEventListener('abort', onOuterAbort)
+  }
   try {
-    const res = await fetch(`https://api.github.com${path}`, { headers, signal })
+    const res = await fetch(`https://api.github.com${path}`, { headers, signal: controller.signal })
     if (!res.ok) return null
     return (await res.json()) as T
   } catch {
     return null
+  } finally {
+    window.clearTimeout(timer)
+    signal?.removeEventListener('abort', onOuterAbort)
   }
 }
 
 /** Fetch all repo data with caching. Never throws — falls back to cache/offline. */
 export async function fetchGitHubBundle(signal?: AbortSignal): Promise<GitHubBundle> {
-  const cachedRaw = localStorage.getItem(KEY)
-  if (cachedRaw) {
-    const cached = JSON.parse(cachedRaw) as GitHubBundle
-    if (Date.now() - cached.fetchedAt < CACHE_TTL) return cached
+  try {
+    const cachedRaw = localStorage.getItem(KEY)
+    if (cachedRaw) {
+      const cached = JSON.parse(cachedRaw) as GitHubBundle
+      if (cached && typeof cached.fetchedAt === 'number' && Date.now() - cached.fetchedAt < CACHE_TTL) {
+        return cached
+      }
+    }
+  } catch {
+    /* corrupt cache — ignore and refetch */
   }
 
   const repo = await gh<{

@@ -1,5 +1,5 @@
 /* ARACHNID — minimal offline-first service worker (app shell only). */
-const CACHE = 'arachnid-v1'
+const CACHE = 'arachnid-v2' // bumped: v1 cached the pre-fix bundle
 
 self.addEventListener('install', (event) => {
   event.waitUntil(

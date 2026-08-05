@@ -84,13 +84,24 @@ export default function LoadingScreen() {
 
   const enter = () => {
     if (booted) return
-    engine.start()
-    if (!soundOn) engine.setEnabled(false)
-    const g = useGame.getState()
-    if (!g.bootedOnce) {
-      g.award('first_visit')
-      useGame.setState({ bootedOnce: true })
+    // Audio is best-effort: Web Audio init must never block entry into the app.
+    try {
+      engine.start()
+      if (!soundOn) engine.setEnabled(false)
+    } catch {
+      /* audio unavailable — proceed silently */
     }
+    // Gamification is best-effort: a storage/achievement failure must not trap the user.
+    try {
+      const g = useGame.getState()
+      if (!g.bootedOnce) {
+        g.award('first_visit')
+        useGame.setState({ bootedOnce: true })
+      }
+    } catch {
+      /* persistence unavailable — proceed */
+    }
+    // Always finish the boot: leaving the loading screen is non-negotiable.
     boot()
   }
 

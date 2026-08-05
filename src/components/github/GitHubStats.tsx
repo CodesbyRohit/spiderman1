@@ -17,9 +17,13 @@ export default function GitHubStats() {
 
   const load = async () => {
     setLoading(true)
-    const data = await fetchGitHubBundle()
-    setBundle(data)
-    setLoading(false)
+    try {
+      const data = await fetchGitHubBundle()
+      setBundle(data)
+    } finally {
+      // fetchGitHubBundle never throws, but always end the spinner state.
+      setLoading(false)
+    }
   }
 
   useEffect(() => {
