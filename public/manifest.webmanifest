@@ -1,0 +1,12 @@
+{
+  "name": "ARACHNID — The Web Guardian",
+  "short_name": "ARACHNID",
+  "description": "A cinematic, AI-powered Spider-inspired interactive experience.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#050508",
+  "theme_color": "#050508",
+  "icons": [
+    { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}
